@@ -1,6 +1,9 @@
 import socket
 from pathlib import Path
 from src import custom_utils
+import subprocess
+import math
+from src.config_utils import read_config
 
 socket_port = None
 PREFERENCES_PATH = Path.joinpath(Path.home(), "Shuffle-Move", "config", "preferences.txt")
@@ -36,6 +39,24 @@ def loadNewBoard():
             if not result:
                 print(f"Socket connected on port {socket_port} but without any response.")
             else:
+                adb_move = read_config().get("adb_move")
+                if "->" in result and adb_move:
+                    y0, x0, y1, x1 = int(result[0]) - 1, int(result[2]) - 1, int(result[7]) - 1, int(result[9]) - 1
+                    pipe = subprocess.Popen("adb shell wm size",stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+                    output = str(pipe.stdout.read())
+                    x, y, w, h = 0, 0, 0, 0
+                    if "1440x3120" in output:
+                        x, y, w, h = 20, 1540, 232.5, 232.5
+                    elif "1080x2160" in output:
+                        x, y, w, h = 17, 968, 174.5, 174.5
+                    subprocess.Popen("adb shell input swipe %d %d %d %d %d" % (
+                        math.floor(x + (w * x0) + (w / 2)), 
+                        math.floor(y + (h * y0) + (h / 2)), 
+                        math.floor(x + (w * x1) + (w / 2)), 
+                        math.floor(y + (h * y1) + (h / 2)), 
+                        250),
+                        stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+
                 print(f"Shuffle Move Result: {result}")
             return result
     except:

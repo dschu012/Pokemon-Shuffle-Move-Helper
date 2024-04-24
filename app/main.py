@@ -213,13 +213,19 @@ class ImageSelectorApp():
         
         self.has_barrier_var = tk.BooleanVar(value=config_utils.config_values.get("has_barrier")) 
         self.control_loop_var = tk.BooleanVar(value=False)
-
+        self.adb_board_var = tk.BooleanVar(value=config_utils.config_values.get("adb_board")) 
+        self.adb_move_var = tk.BooleanVar(value=config_utils.config_values.get("adb_move"))
        
+
         self.control_loop_switch = customtkinter.CTkSwitch(frame3_1_top, text="Capture Loop", variable=self.control_loop_var, onvalue=True, offvalue=False, command=lambda: self.control_loop_function())
         self.has_barrier_switch = customtkinter.CTkSwitch(frame3_1_top, text="Has Barriers", variable=self.has_barrier_var, command=self.reveal_or_hide_barrier_img)
         self.control_loop_switch.pack(side=tk.TOP, anchor=tk.W, padx=5)
         self.has_barrier_switch.pack(side=tk.TOP, anchor=tk.W, padx=5)
-        
+
+        self.adb_board_switch = customtkinter.CTkSwitch(frame3_1_top, text="ADB Board", variable=self.adb_board_var, onvalue=True, offvalue=False, command=self.adb_board)
+        self.adb_move_switch = customtkinter.CTkSwitch(frame3_1_top, text="ADB Move", variable=self.adb_move_var, onvalue=True, offvalue=False, command=self.adb_move)
+        self.adb_board_switch.pack(side=tk.TOP, anchor=tk.W, padx=5)
+        self.adb_move_switch.pack(side=tk.TOP, anchor=tk.W, padx=5)
         keyboard.add_hotkey('f3', lambda:  self.control_loop_switch.toggle())
         keyboard.add_hotkey('f4', lambda: self.has_barrier_switch.toggle())
         
@@ -592,6 +598,15 @@ class ImageSelectorApp():
             return customtkinter.CTkImage(Image.open(Path("assets", "fonts", f"{icon_name}-solid_w.png")), size=(25, 25))
         else:
             return customtkinter.CTkImage(Image.open(Path("assets", "fonts", f"{icon_name}-solid.png")), size=(25, 25))
+
+    def adb_board(self):
+        v = self.adb_board_var.get()
+        config_utils.update_config("adb_board", v)
+
+    def adb_move(self):
+        v = self.adb_move_var.get()
+        config_utils.update_config("adb_move", v)
+
 
     def reveal_or_hide_barrier_img(self):
         has_barrier = self.has_barrier_var.get()

@@ -8,11 +8,13 @@ from pathlib import Path
 import time
 from src.embed import loaded_embedder
 from src import constants, custom_utils
-from src.config_utils import config_values
+from src.config_utils import read_config, config_values
 from src import socket_utils, shuffle_config_files
 from src.classes import Icon, Match, Pokemon, MatchResult
 import statistics
 from datetime import datetime
+import subprocess
+import math
 
 
 board_top_left = config_values.get("board_top_left")
@@ -153,19 +155,39 @@ def predict(original_image, icons_list, has_barriers) -> Match:
     
 
 def capture_board_screensot(save=True, return_type="cv2"):
-    global board_top_left, board_bottom_right
-    x0 = board_top_left[0]
-    x1 = board_bottom_right[0] - board_top_left[0]
-    y0 = board_top_left[1]
-    y1 = board_bottom_right[1] - board_top_left[1]
-    # print(f"Screenshot at: {datetime.now()}")
-    img = pyautogui.screenshot(region=(x0, y0, x1, y1))
-    if save:
-        img.save(constants.LAST_BOARD_IMAGE_PATH)
-    if return_type == "cv2":
-        return cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+    adb_board = read_config().get("adb_board")
+    if adb_board:
+        # adb exec-out screencap -p
+        pipe = subprocess.Popen("adb shell wm size",stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+        output = str(pipe.stdout.read())
+        x, y, w, h = 0, 0, 0, 0
+        if "1440x3120" in output:
+            x, y, w, h = 20, 1540, 232.5, 232.5
+        elif "1080x2160" in output:
+            x, y, w, h = 17, 968, 174.5, 174.5
+        pipe = subprocess.Popen("adb shell screencap -p", stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+        image_bytes = pipe.stdout.read().replace(b'\r\n', b'\n')
+        img = cv2.imdecode(np.fromstring(image_bytes, np.uint8), cv2.IMREAD_COLOR)
+        img = img[y:y+math.floor(h*6), x:x+math.floor(w*6)].copy()
+        cv2.imwrite(constants.LAST_BOARD_IMAGE_PATH, img)
+        if return_type == "cv2":
+            return img
+        else:
+            return img
     else:
-        return img
+        global board_top_left, board_bottom_right
+        x0 = board_top_left[0]
+        x1 = board_bottom_right[0] - board_top_left[0]
+        y0 = board_top_left[1]
+        y1 = board_bottom_right[1] - board_top_left[1]
+        # print(f"Screenshot at: {datetime.now()}")
+        img = pyautogui.screenshot(region=(x0, y0, x1, y1))
+        if save:
+            img.save(constants.LAST_BOARD_IMAGE_PATH)
+        if return_type == "cv2":
+            return cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+        else:
+            return img
 
 def make_cell_list(forced_board_image=None):
     if forced_board_image is None:
